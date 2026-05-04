@@ -8,6 +8,14 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Create default launcher icons
+        script: |
+          FLUTTER_ROOT=$(flutter --version --machine | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['flutterRoot'])")
+          for dpi in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$dpi
+            cp "$FLUTTER_ROOT/packages/flutter_tools/templates/app/android.tmpl/app/src/main/res/mipmap-$dpi/ic_launcher.png" \
+               android/app/src/main/res/mipmap-$dpi/ic_launcher.png
+          done
       - name: Build APK
         script: flutter build apk --release --no-tree-shake-icons
     artifacts:
