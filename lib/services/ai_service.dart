@@ -1,9 +1,19 @@
+import 'package:flutter/material.dart';
 import '../models/question_model.dart';
 
-class AIService {
+class AIService extends ChangeNotifier {
+
+  bool isLoading = false;
 
   Future<String> generateStoryIntro(String topic) async {
+    isLoading = true;
+    notifyListeners();
+
     await Future.delayed(Duration(seconds: 1));
+
+    isLoading = false;
+    notifyListeners();
+
     return "Yeni bir macera başlıyor 🚀 ($topic)";
   }
 
@@ -13,7 +23,13 @@ class AIService {
     required int difficulty,
     required dynamic student,
   }) async {
+    isLoading = true;
+    notifyListeners();
+
     await Future.delayed(Duration(seconds: 2));
+
+    isLoading = false;
+    notifyListeners();
 
     return Question(
       text: "2 + 2 kaçtır?",
@@ -33,7 +49,13 @@ class AIService {
     required dynamic student,
     required int attemptNumber,
   }) async {
+    isLoading = true;
+    notifyListeners();
+
     await Future.delayed(Duration(seconds: 1));
+
+    isLoading = false;
+    notifyListeners();
 
     return {
       "encouragement": "Biraz daha dikkat etmelisin 💪",
