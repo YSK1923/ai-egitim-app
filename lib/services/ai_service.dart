@@ -4,7 +4,6 @@ import '../models/question_model.dart';
 class AIService extends ChangeNotifier {
   bool isLoading = false;
 
-  // 🧠 Hikaye giriş
   Future<String> generateStoryIntro(String topic) async {
     isLoading = true;
     notifyListeners();
@@ -17,7 +16,6 @@ class AIService extends ChangeNotifier {
     return "Yeni bir macera başlıyor 🚀 ($topic)";
   }
 
-  // ❓ Soru üretimi
   Future<Question> generateQuestion({
     required String topic,
     required String subtopic,
@@ -34,7 +32,7 @@ class AIService extends ChangeNotifier {
 
     return Question(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      topic: topic, // 🔥 zorunlu alan
+      topic: topic,
       text: "2 + 2 kaçtır?",
       options: ["3", "4", "5", "6"],
       correctIndex: 1,
@@ -43,10 +41,10 @@ class AIService extends ChangeNotifier {
       difficulty: difficulty,
       examProbability: 0.8,
       storyContext: "Bir kahraman 2 elma buldu, sonra 2 tane daha buldu...",
+      emoji: "🧮", // gerekli alan
     );
   }
 
-  // 🤖 Yanlış cevap analizi
   Future<AIResponse> analyzeWrongAnswer({
     required Question question,
     required String userAnswer,
@@ -66,10 +64,13 @@ class AIService extends ChangeNotifier {
       explanation: "Doğru cevap 4 çünkü 2+2=4",
       alternativeExplanation: "Toplama işlemi yapıyoruz.",
       storyMode: "Kahraman toplamayı öğreniyor...",
+      hints: [
+        "Toplama işlemi yapıyoruz",
+        "2 sayısını iki kez ekle",
+      ],
     );
   }
 
-  // 📊 Ana sayfa içgörü
   Future<String> generateLearningInsight(dynamic student) async {
     isLoading = true;
     notifyListeners();
