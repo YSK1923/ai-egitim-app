@@ -5,16 +5,20 @@ import '../models/question_model.dart';
 import '../models/student_model.dart';
 
 class AIService extends ChangeNotifier {
-  static const String _apiKey = 'AIzaSyCbidrLu3nNZLT9X71EivAF82BwjhTInrA';
+  // ⚠️ BURAYA YENİ API ANAHTARINIZI YAZIN
+  // https://aistudio.google.com/app/apikey adresinden alabilirsiniz
+  static const String _apiKey = 'AIzaSyD-2yAmVEnF_HAT4FOLT7ntNuWx_L8cNJ';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   bool _isLoading = false;
   String _currentExplanation = '';
+  String _errorMessage = '';
   int _attemptCount = 0;
 
   bool get isLoading => _isLoading;
   String get currentExplanation => _currentExplanation;
+  String get errorMessage => _errorMessage;
 
   Future<Question?> generateQuestion({
     required String topic,
@@ -23,6 +27,7 @@ class AIService extends ChangeNotifier {
     required StudentModel student,
   }) async {
     _isLoading = true;
+    _errorMessage = '';
     notifyListeners();
 
     final mastery = student.topicMastery[topic] ?? 0.0;
@@ -56,10 +61,15 @@ Aşağıdaki JSON formatında yanıt ver (başka hiçbir şey yazma):
       if (response != null) {
         final cleaned = response.replaceAll('```json', '').replaceAll('```', '').trim();
         final json = jsonDecode(cleaned);
+        _isLoading = false;
+        notifyListeners();
         return Question.fromJson(json);
+      } else {
+        _errorMessage = 'Soru üretilemedi. API yanıt vermedi.';
       }
     } catch (e) {
       debugPrint('Soru üretme hatası: $e');
+      _errorMessage = 'Soru üretilirken hata oluştu: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -75,6 +85,7 @@ Aşağıdaki JSON formatında yanıt ver (başka hiçbir şey yazma):
   }) async {
     _isLoading = true;
     _attemptCount = attemptNumber;
+    _errorMessage = '';
     notifyListeners();
 
     final explanationStyle = attemptNumber == 1
@@ -112,10 +123,15 @@ Aşağıdaki JSON formatında yanıt ver:
         final json = jsonDecode(cleaned);
         _currentExplanation = json['explanation'] ?? '';
         notifyListeners();
+        _isLoading = false;
+        notifyListeners();
         return AIResponse.fromJson(json);
+      } else {
+        _errorMessage = 'Açıklama alınamadı. API yanıt vermedi.';
       }
     } catch (e) {
       debugPrint('Cevap analiz hatası: $e');
+      _errorMessage = 'Analiz sırasında hata oluştu: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -153,9 +169,10 @@ Başarı: ${(student.successRate * 100).toInt()}%, Seri: ${student.streak} gün.
 Kısa (2-3 cümle), motive edici, emoji'li, Türkçe değerlendirme yap.
 ''';
     try {
-      return await _callAPI(prompt) ?? '🌟 Harika ilerliyorsun!';
+      final result = await _callAPI(prompt);
+      return result ?? '🌟 Bugün harika bir gün, hadi başlayalım!';
     } catch (e) {
-      return '🌟 Harika ilerliyorsun!';
+      return '🌟 Bugün harika bir gün, hadi başlayalım!';
     }
   }
 
@@ -169,6 +186,14 @@ Kısa (2-3 cümle), motive edici, emoji'li, Türkçe değerlendirme yap.
   }
 
   Future<String?> _callAPI(String prompt) async {
+    // API anahtarı kontrol et
+    if (_apiKey == 'BURAYA_API_ANAHTARINIZI_YAZIN' || _apiKey.isEmpty) {
+      debugPrint('⚠️ API anahtarı ayarlanmamış!');
+      _errorMessage = 'API anahtarı eksik. Lütfen ai_service.dart dosyasını güncelleyin.';
+      notifyListeners();
+      return null;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl?key=$_apiKey'),
@@ -186,17 +211,36 @@ Kısa (2-3 cümle), motive edici, emoji'li, Türkçe değerlendirme yap.
             'temperature': 0.7,
           },
         }),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('API isteği zaman aşımına uğradı (30 saniye)');
+        },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['candidates'][0]['content']['parts'][0]['text'] as String?;
+      } else if (response.statusCode == 400) {
+        debugPrint('API 400 hatası - Geçersiz istek: ${response.body}');
+        _errorMessage = 'API isteği geçersiz. Lütfen tekrar deneyin.';
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint('API 401/403 hatası - Geçersiz anahtar: ${response.body}');
+        _errorMessage = '❌ API anahtarı geçersiz veya süresi dolmuş!\n'
+            'https://aistudio.google.com/app/apikey adresinden yeni anahtar alın.';
+      } else if (response.statusCode == 429) {
+        debugPrint('API 429 hatası - Rate limit: ${response.body}');
+        _errorMessage = 'Çok fazla istek gönderildi. Lütfen biraz bekleyin.';
       } else {
         debugPrint('API hatası: ${response.statusCode} - ${response.body}');
-        return null;
+        _errorMessage = 'Sunucu hatası (${response.statusCode}). Lütfen tekrar deneyin.';
       }
+      notifyListeners();
+      return null;
     } catch (e) {
       debugPrint('HTTP hatası: $e');
+      _errorMessage = 'Bağlantı hatası: $e';
+      notifyListeners();
       return null;
     }
   }
