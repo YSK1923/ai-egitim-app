@@ -1,43 +1,45 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../models/question_model.dart';
 
 class AIService {
-  final String _apiKey = 'BURAYA_GEMINI_API_KEY';
 
-  Future<String> generateQuestion(String topic) async {
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$_apiKey',
+  Future<String> generateStoryIntro(String topic) async {
+    await Future.delayed(Duration(seconds: 1));
+    return "Yeni bir macera başlıyor 🚀 ($topic)";
+  }
+
+  Future<Question> generateQuestion({
+    required String topic,
+    required String subtopic,
+    required int difficulty,
+    required dynamic student,
+  }) async {
+    await Future.delayed(Duration(seconds: 2));
+
+    return Question(
+      text: "2 + 2 kaçtır?",
+      options: ["3", "4", "5", "6"],
+      correctIndex: 1,
+      explanation: "2 + 2 = 4 eder.",
+      subtopic: subtopic,
+      difficulty: difficulty,
+      examProbability: 0.8,
+      storyContext: "Bir kahraman 2 elma buldu, sonra 2 tane daha buldu...",
     );
+  }
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "contents": [
-          {
-            "parts": [
-              {
-                "text":
-                    "Konu: $topic. 4 şıklı, açıklamalı bir test sorusu üret. JSON formatında dön: question, options, correctAnswer, explanation"
-              }
-            ]
-          }
-        ]
-      }),
-    );
+  Future<dynamic> analyzeWrongAnswer({
+    required Question question,
+    required String userAnswer,
+    required dynamic student,
+    required int attemptNumber,
+  }) async {
+    await Future.delayed(Duration(seconds: 1));
 
-    if (response.statusCode != 200) {
-      throw Exception("API Hatası: ${response.body}");
-    }
-
-    final data = jsonDecode(response.body);
-
-    // Gemini cevabı buradan gelir
-    final text =
-        data['candidates'][0]['content']['parts'][0]['text'];
-
-    return text;
+    return {
+      "encouragement": "Biraz daha dikkat etmelisin 💪",
+      "explanation": "Doğru cevap 4 çünkü 2+2=4",
+      "alternativeExplanation": "Toplama işlemi yapıyoruz.",
+      "storyMode": "Kahraman toplamayı öğreniyor...",
+    };
   }
 }
