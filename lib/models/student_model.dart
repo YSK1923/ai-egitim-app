@@ -1,22 +1,26 @@
 class StudentModel {
   final String id;
+  String name;
   int xp;
   int level;
+  int streak;
   DateTime lastActive;
 
-  // 🔥 EKLENENLER
+  // 🔥 Öğrenme verileri
   Map<String, double> topicMastery;
 
   StudentModel({
     required this.id,
+    this.name = 'Öğrenci',
     this.xp = 0,
     this.level = 1,
+    this.streak = 0,
     DateTime? lastActive,
     Map<String, double>? topicMastery,
   })  : lastActive = lastActive ?? DateTime.now(),
         topicMastery = topicMastery ?? {};
 
-  // 🔥 LEVEL TITLE (profile_screen hatası çözülür)
+  // 🔥 Profil ekranı için
   String get levelTitle {
     if (level < 5) return "Başlangıç 🐣";
     if (level < 10) return "Gelişen 🚀";
@@ -27,9 +31,11 @@ class StudentModel {
   // JSON
   factory StudentModel.fromJson(Map<String, dynamic> json) {
     return StudentModel(
-      id: json['id'],
+      id: json['id'] ?? '1',
+      name: json['name'] ?? 'Öğrenci',
       xp: json['xp'] ?? 0,
       level: json['level'] ?? 1,
+      streak: json['streak'] ?? 0,
       lastActive: DateTime.tryParse(json['lastActive'] ?? '') ?? DateTime.now(),
       topicMastery: Map<String, double>.from(json['topicMastery'] ?? {}),
     );
@@ -37,15 +43,17 @@ class StudentModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'name': name,
         'xp': xp,
         'level': level,
+        'streak': streak,
         'lastActive': lastActive.toIso8601String(),
         'topicMastery': topicMastery,
       };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// 🔥 YENİ CLASS (HATA BURADAN GELİYORDU)
+// 🔥 SORU DENEME MODELİ
 ////////////////////////////////////////////////////////////////////////////////
 
 class QuestionAttempt {
