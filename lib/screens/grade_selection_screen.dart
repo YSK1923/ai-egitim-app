@@ -8,7 +8,7 @@ class GradeSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final grades = List.generate(8, (i) => i + 5); // 5-12
+    final grades = List.generate(8, (i) => i + 5);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0EFFE),
@@ -26,7 +26,6 @@ class GradeSelectionScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 30),
-
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -47,7 +46,9 @@ class GradeSelectionScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6C63FF),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 16),
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                     ),
                     child: Text(
                       '$grade. sınıf',
