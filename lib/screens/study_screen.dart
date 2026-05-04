@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/question_model.dart';
-import '../models/student_model.dart';
-import '../services/student_model_service.dart';
 
 class StudyScreen extends StatefulWidget {
   final Topic topic;
@@ -15,15 +12,12 @@ class StudyScreen extends StatefulWidget {
 
 class _StudyScreenState extends State<StudyScreen> {
   Question? _question;
-  int? selectedIndex;
+  int? selected;
 
   @override
   void initState() {
     super.initState();
-    _loadQuestion();
-  }
 
-  void _loadQuestion() {
     _question = Question(
       id: '1',
       topic: widget.topic.id,
@@ -37,22 +31,6 @@ class _StudyScreenState extends State<StudyScreen> {
       emoji: '➕',
       storyContext: '',
     );
-  }
-
-  void _answer(int index) async {
-    setState(() {
-      selectedIndex = index;
-    });
-
-    final isCorrect = index == _question!.correctIndex;
-
-    await context.read<StudentModelService>().recordAttempt(
-          QuestionAttempt(
-            questionId: _question!.id,
-            topic: widget.topic.id,
-            isCorrect: isCorrect,
-          ),
-        );
   }
 
   @override
@@ -69,29 +47,23 @@ class _StudyScreenState extends State<StudyScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text(
-              _question!.text,
-              style: const TextStyle(fontSize: 20),
-            ),
+            Text(_question!.text, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
             ...List.generate(_question!.options.length, (i) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: ElevatedButton(
-                  onPressed: selectedIndex == null
-                      ? () => _answer(i)
-                      : null,
-                  child: Text(_question!.options[i]),
-                ),
+              return ElevatedButton(
+                onPressed: selected == null
+                    ? () => setState(() => selected = i)
+                    : null,
+                child: Text(_question!.options[i]),
               );
             }),
             const SizedBox(height: 20),
-            if (selectedIndex != null)
+            if (selected != null)
               Text(
-                selectedIndex == _question!.correctIndex
+                selected == _question!.correctIndex
                     ? 'Doğru 🎉'
-                    : 'Yanlış 😢\n${_question!.explanation}',
-              ),
+                    : 'Yanlış\n${_question!.explanation}',
+              )
           ],
         ),
       ),
