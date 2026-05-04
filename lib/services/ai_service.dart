@@ -33,15 +33,15 @@ class AIService extends ChangeNotifier {
     return Question(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       topic: topic,
+      subtopic: subtopic,
       text: "2 + 2 kaçtır?",
       options: ["3", "4", "5", "6"],
       correctIndex: 1,
       explanation: "2 + 2 = 4 eder.",
-      subtopic: subtopic,
       difficulty: difficulty,
       examProbability: 0.8,
+      emoji: "🧮",
       storyContext: "Bir kahraman 2 elma buldu, sonra 2 tane daha buldu...",
-      emoji: "🧮", // gerekli alan
     );
   }
 
@@ -60,14 +60,15 @@ class AIService extends ChangeNotifier {
     notifyListeners();
 
     return AIResponse(
-      encouragement: "Biraz daha dikkat etmelisin 💪",
       explanation: "Doğru cevap 4 çünkü 2+2=4",
       alternativeExplanation: "Toplama işlemi yapıyoruz.",
       storyMode: "Kahraman toplamayı öğreniyor...",
+      encouragement: "Biraz daha dikkat etmelisin 💪",
       hints: [
         "Toplama işlemi yapıyoruz",
         "2 sayısını iki kez ekle",
       ],
+      suggestedXP: 10, // 🔥 KRİTİK EKSİK BUYDU
     );
   }
 
