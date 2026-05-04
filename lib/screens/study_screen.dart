@@ -25,6 +25,10 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
   bool _showAlternative = false;
   String _storyIntro = '';
 
+  // BUG FIX 1: Hata durumunu takip eden state değişkenleri eklendi
+  String? _questionLoadError;
+  String? _aiResponseError;
+
   late AnimationController _shakeController;
   late AnimationController _celebrateController;
   late Animation<double> _shakeAnimation;
@@ -51,46 +55,66 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
   }
 
   Future<void> _loadStoryAndQuestion() async {
-    final aiService = context.read<AIService>();
-    final studentService = context.read<StudentModelService>();
-    final student = studentService.student;
+    // BUG FIX 1: Yeniden deneme öncesi hata state'i sıfırla
+    if (mounted) setState(() => _questionLoadError = null);
 
-    // Hikaye girişini yükle
-    final story = await aiService.generateStoryIntro(widget.topic.name);
-    if (mounted) setState(() => _storyIntro = story);
+    try {
+      final aiService = context.read<AIService>();
+      final studentService = context.read<StudentModelService>();
+      final student = studentService.student;
 
-    // İlk soruyu üret
-    await _generateNextQuestion(student);
+      final story = await aiService.generateStoryIntro(widget.topic.name);
+      if (mounted) setState(() => _storyIntro = story);
+
+      await _generateNextQuestion(student);
+    } catch (e) {
+      // BUG FIX 1: Hata yakalanıyor ve state'e yazılıyor
+      if (mounted) {
+        setState(() => _questionLoadError = 'Soru yüklenemedi: ${e.toString()}');
+      }
+    }
   }
 
   Future<void> _generateNextQuestion(StudentModel? student) async {
     if (student == null) return;
-    final aiService = context.read<AIService>();
-    final studentService = context.read<StudentModelService>();
 
-    final difficulty = studentService.getRecommendedDifficulty(widget.topic.id);
-    final subtopic = widget.topic.subtopics.isNotEmpty
-        ? widget.topic.subtopics[_correctStreak % widget.topic.subtopics.length]
-        : widget.topic.name;
+    // BUG FIX 1: Soru yükleme hatasını temizle
+    if (mounted) setState(() => _questionLoadError = null);
 
-    final question = await aiService.generateQuestion(
-      topic: widget.topic.id,
-      subtopic: subtopic,
-      difficulty: difficulty,
-      student: student,
-    );
+    try {
+      final aiService = context.read<AIService>();
+      final studentService = context.read<StudentModelService>();
 
-    if (mounted) {
-      setState(() {
-        _currentQuestion = question;
-        _selectedOption = null;
-        _answered = false;
-        _isCorrect = false;
-        _attemptCount = 0;
-        _aiResponse = null;
-        _showStory = false;
-        _showAlternative = false;
-      });
+      final difficulty = studentService.getRecommendedDifficulty(widget.topic.id);
+      final subtopic = widget.topic.subtopics.isNotEmpty
+          ? widget.topic.subtopics[_correctStreak % widget.topic.subtopics.length]
+          : widget.topic.name;
+
+      final question = await aiService.generateQuestion(
+        topic: widget.topic.id,
+        subtopic: subtopic,
+        difficulty: difficulty,
+        student: student,
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentQuestion = question;
+          _selectedOption = null;
+          _answered = false;
+          _isCorrect = false;
+          _attemptCount = 0;
+          _aiResponse = null;
+          _aiResponseError = null;
+          _showStory = false;
+          _showAlternative = false;
+        });
+      }
+    } catch (e) {
+      // BUG FIX 1: Soru üretme hatası state'e yazılıyor
+      if (mounted) {
+        setState(() => _questionLoadError = 'Yeni soru oluşturulamadı: ${e.toString()}');
+      }
     }
   }
 
@@ -113,7 +137,6 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
       });
       _celebrateController.forward(from: 0);
 
-      // XP kaydet
       final studentService = context.read<StudentModelService>();
       await studentService.recordAttempt(QuestionAttempt(
         topic: widget.topic.id,
@@ -126,26 +149,35 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
     } else {
       _shakeController.forward(from: 0);
 
-      // AI'dan açıklama al
-      final aiService = context.read<AIService>();
-      final studentService = context.read<StudentModelService>();
-      final response = await aiService.analyzeWrongAnswer(
-        question: _currentQuestion!,
-        userAnswer: _currentQuestion!.options[index],
-        student: studentService.student!,
-        attemptNumber: _attemptCount,
-      );
+      // BUG FIX 2: AI yanıt hatasını temizle, yüklemeyi göster
+      setState(() {
+        _answered = true;
+        _isCorrect = false;
+        _aiResponse = null;
+        _aiResponseError = null;
+      });
 
-      if (mounted) {
-        setState(() {
-          _answered = true;
-          _isCorrect = false;
-          _aiResponse = response;
-        });
+      try {
+        final aiService = context.read<AIService>();
+        final studentService = context.read<StudentModelService>();
+        final response = await aiService.analyzeWrongAnswer(
+          question: _currentQuestion!,
+          userAnswer: _currentQuestion!.options[index],
+          student: studentService.student!,
+          attemptNumber: _attemptCount,
+        );
+
+        if (mounted) {
+          setState(() => _aiResponse = response);
+        }
+      } catch (e) {
+        // BUG FIX 2: AI açıklama hatası state'e yazılıyor — sonsuz spinner yok
+        if (mounted) {
+          setState(() => _aiResponseError = 'Açıklama yüklenemedi. Tekrar dene.');
+        }
       }
 
-      // Yanlış cevabı da kaydet
-      await studentService.recordAttempt(QuestionAttempt(
+      await context.read<StudentModelService>().recordAttempt(QuestionAttempt(
         topic: widget.topic.id,
         question: _currentQuestion!.text,
         userAnswer: _currentQuestion!.options[index],
@@ -160,6 +192,8 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
     setState(() {
       _answered = false;
       _selectedOption = null;
+      _aiResponse = null;
+      _aiResponseError = null;
     });
   }
 
@@ -221,6 +255,10 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
       ),
       body: Consumer<AIService>(
         builder: (context, aiService, _) {
+          // BUG FIX 1: Hata durumu kontrolü — sonsuz yükleme yerine hata ekranı
+          if (_questionLoadError != null) {
+            return _buildErrorState(_questionLoadError!, onRetry: _loadStoryAndQuestion);
+          }
           if (aiService.isLoading && _currentQuestion == null) {
             return _buildLoadingState();
           }
@@ -229,6 +267,45 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
           }
           return _buildStudyContent(aiService);
         },
+      ),
+    );
+  }
+
+  // BUG FIX 1: Soru yükleme hatası için hata ekranı widget'ı
+  Widget _buildErrorState(String message, {required VoidCallback onRetry}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('😕', style: TextStyle(fontSize: 64)),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF555555),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tekrar Dene'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -258,25 +335,17 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Hikaye bağlamı
           if (_currentQuestion!.storyContext.isNotEmpty) ...[
             _buildStoryCard(),
             const SizedBox(height: 16),
           ],
-
-          // Soru kartı
           _buildQuestionCard(),
           const SizedBox(height: 20),
-
-          // Seçenekler
           ...List.generate(
             _currentQuestion!.options.length,
             (i) => _buildOptionCard(i),
           ),
-
           const SizedBox(height: 20),
-
-          // Sonuç alanı
           if (_answered) _buildResultArea(aiService),
         ],
       ),
@@ -585,6 +654,78 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
   }
 
   Widget _buildWrongResult(AIService aiService) {
+    // BUG FIX 2: AI yanıt hatası için hata mesajı göster — sonsuz spinner yok
+    if (_aiResponseError != null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEBEE),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF44336).withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            const Text('😞', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 12),
+            Text(
+              _aiResponseError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Color(0xFFC62828)),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _tryAgain,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF6C63FF)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('🔄 Tekrar Dene'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      // AI açıklamasını tekrar yüklemeyi dene
+                      if (_selectedOption == null || _currentQuestion == null) return;
+                      setState(() => _aiResponseError = null);
+                      try {
+                        final response = await context.read<AIService>().analyzeWrongAnswer(
+                          question: _currentQuestion!,
+                          userAnswer: _currentQuestion!.options[_selectedOption!],
+                          student: context.read<StudentModelService>().student!,
+                          attemptNumber: _attemptCount,
+                        );
+                        if (mounted) setState(() => _aiResponse = response);
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _aiResponseError = 'Açıklama yüklenemedi. Tekrar dene.');
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('🤖 AI\'dan İste'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // BUG FIX 2: _aiResponse null ise spinner göster (bu geçici bir durum, hata değil)
     if (_aiResponse == null) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -621,7 +762,6 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Teşvik mesajı
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -646,8 +786,6 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
             ),
           ),
           const SizedBox(height: 16),
-
-          // Ana açıklama
           const Text(
             '📚 Açıklama',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
@@ -658,8 +796,6 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
             style: const TextStyle(fontSize: 14, height: 1.6, color: Color(0xFF424242)),
           ),
           const SizedBox(height: 16),
-
-          // Alternatif açıklama toggle
           GestureDetector(
             onTap: () => setState(() => _showAlternative = !_showAlternative),
             child: Container(
@@ -701,10 +837,7 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
               ),
             ),
           ],
-
           const SizedBox(height: 16),
-
-          // Hikaye modu
           GestureDetector(
             onTap: () => setState(() => _showStory = !_showStory),
             child: Container(
@@ -741,10 +874,7 @@ class _StudyScreenState extends State<StudyScreen> with TickerProviderStateMixin
               ),
             ),
           ],
-
           const SizedBox(height: 20),
-
-          // Tekrar dene butonu
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
