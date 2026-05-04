@@ -5,6 +5,7 @@ class AIService extends ChangeNotifier {
 
   bool isLoading = false;
 
+  // 🧠 Hikaye giriş
   Future<String> generateStoryIntro(String topic) async {
     isLoading = true;
     notifyListeners();
@@ -17,6 +18,7 @@ class AIService extends ChangeNotifier {
     return "Yeni bir macera başlıyor 🚀 ($topic)";
   }
 
+  // ❓ Soru üretimi
   Future<Question> generateQuestion({
     required String topic,
     required String subtopic,
@@ -32,6 +34,7 @@ class AIService extends ChangeNotifier {
     notifyListeners();
 
     return Question(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // 🔥 BU ZORUNLU
       text: "2 + 2 kaçtır?",
       options: ["3", "4", "5", "6"],
       correctIndex: 1,
@@ -43,7 +46,8 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  Future<dynamic> analyzeWrongAnswer({
+  // 🤖 Yanlış cevap analizi
+  Future<Map<String, String>> analyzeWrongAnswer({
     required Question question,
     required String userAnswer,
     required dynamic student,
@@ -63,5 +67,18 @@ class AIService extends ChangeNotifier {
       "alternativeExplanation": "Toplama işlemi yapıyoruz.",
       "storyMode": "Kahraman toplamayı öğreniyor...",
     };
+  }
+
+  // 📊 Ana sayfa içgörü
+  Future<String> generateLearningInsight(dynamic student) async {
+    isLoading = true;
+    notifyListeners();
+
+    await Future.delayed(Duration(seconds: 1));
+
+    isLoading = false;
+    notifyListeners();
+
+    return "Bugün harika gidiyorsun! 🔥 En güçlü konun gelişiyor.";
   }
 }
