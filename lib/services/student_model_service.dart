@@ -8,14 +8,17 @@ class StudentModelService extends ChangeNotifier {
 
   StudentModel? get student => _student;
 
+  bool get hasStudent => _student != null;
+
   Future<void> loadStudent() async {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString('student');
 
     if (json != null) {
       _student = StudentModel.fromJson(jsonDecode(json));
-      notifyListeners();
     }
+
+    notifyListeners();
   }
 
   Future<void> createStudent(String name, int grade) async {
