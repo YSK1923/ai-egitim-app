@@ -1,124 +1,105 @@
-Build APK
-1m 27s
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/question_model.dart';
+import '../services/student_model_service.dart';
 
+class StudyScreen extends StatefulWidget {
+final Topic topic;
 
+const StudyScreen({super.key, required this.topic});
 
-Show command
-Showing the last 50 lines. Click this button to load the full log
+@override
+State<StudyScreen> createState() => _StudyScreenState();
+}
+
+class _StudyScreenState extends State<StudyScreen> {
+Question? _currentQuestion;
+int? selectedIndex;
+
+@override
+void initState() {
+super.initState();
+_loadDummyQuestion();
+}
+
+void _loadDummyQuestion() {
+_currentQuestion = Question(
+id: '1',
+topic: widget.topic.id,
+subtopic: '',
+text: '2 + 2 kaçtır?',
+options: ['3', '4', '5', '6'],
+correctIndex: 1,
+explanation: '2 + 2 = 4',
+difficulty: 1,
+examProbability: 0.5,
+emoji: '➕',
+storyContext: '',
+);
+}
+
+void _answerQuestion(int index) async {
+setState(() {
+selectedIndex = index;
+});
+
+```
+final isCorrect = index == _currentQuestion!.correctIndex;
+
+await context.read<StudentModelService>().recordAttempt(
+      QuestionAttempt(
+        questionId: _currentQuestion!.id,
         topic: widget.topic.id,
-        ^^^^^
-lib/models/student_model.dart:64:3: Context: Found this candidate, but the arguments don't match.
-  QuestionAttempt({
-  ^^^^^^^^^^^^^^^
-Target kernel_snapshot_program failed: Exception
+        isCorrect: isCorrect,
+      ),
+    );
+```
 
+}
 
-FAILURE: Build failed with an exception.
+@override
+Widget build(BuildContext context) {
+if (_currentQuestion == null) {
+return const Scaffold(
+body: Center(child: CircularProgressIndicator()),
+);
+}
 
-* What went wrong:
-Execution failed for task ':app:compileFlutterBuildRelease'.
-> Process 'command '/Users/builder/programs/flutter/bin/flutter'' finished with non-zero exit value 1
+```
+return Scaffold(
+  appBar: AppBar(title: Text(widget.topic.name)),
+  body: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      children: [
+        Text(
+          _currentQuestion!.text,
+          style: const TextStyle(fontSize: 20),
+        ),
+        const SizedBox(height: 20),
+        ...List.generate(_currentQuestion!.options.length, (i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ElevatedButton(
+              onPressed: selectedIndex == null
+                  ? () => _answerQuestion(i)
+                  : null,
+              child: Text(_currentQuestion!.options[i]),
+            ),
+          );
+        }),
+        const SizedBox(height: 20),
+        if (selectedIndex != null)
+          Text(
+            selectedIndex == _currentQuestion!.correctIndex
+                ? 'Doğru! 🎉'
+                : 'Yanlış 😢\n${_currentQuestion!.explanation}',
+          ),
+      ],
+    ),
+  ),
+);
+```
 
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 1m 25s
-Running Gradle task 'assembleRelease'...                           86.0s
-Gradle task assembleRelease failed with exit code 1
-
-
-Build failed :|
-Step 5 script `Build APK` exited with status code 1
-Target kernel_snapshot_program failed: Exception
-
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':app:compileFlutterBuildRelease'.
-> Process 'command '/Users/builder/programs/flutter/bin/flutter'' finished with non-zero exit value 1
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 1m 25s
-Running Gradle task 'assembleRelease'...                           86.0s
-Gradle task assembleRelease failed with exit code 1
-
-
-Build failed :|
-Step 5 script `Build APK` exited with status code 1
-
-Personal Account
-Personal Account
-Personal Account
-Personal Account
-Create new team
-Applications
-Builds
-OTA Updates
-NEW
-App Preview
-Settings
-Billing
-All systems operational
-
-User preferences
-yavuzselkaya2@gmail.com
-
-Log out
-ai-egitim-app
-ai-egitim-app
-github.com/YSK1923/ai-egitim-app
-
-
-Start new build
-Build overview
-ID:
-69f8fc361e73c0496fb733d2
-
-Please provide this ID when you contact our support team
-Index:
-16
-Status:
-failed
-Workflow:
-Android Build
-Started by:
-yavuzselkaya2@gmail.com
-
-yavuzselkaya2@gmail.com
-Started:
-18 minutes ago
-May 4th, 2026 at 23:06 +03
-Duration:
-4m 33s
-Machine:
-Mac mini M2
-Branch:
-main
-Commit:
-cc53376
-Click on the build steps for details.
-Preparing build machine
-1m 45s
-Fetching app sources
-2s
-Installing SDKs
-33s
-Get Flutter packages
-43s
-Create default launcher icons
-< 1s
-Publishing
-< 1s
-Cleaning up
-< 1s
-Step 5 script `Build APK` exited with status code 1
-
+}
+}
