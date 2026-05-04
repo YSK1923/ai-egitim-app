@@ -7,7 +7,7 @@ import '../models/student_model.dart';
 class AIService extends ChangeNotifier {
   // ⚠️ BURAYA YENİ API ANAHTARINIZI YAZIN
   // https://aistudio.google.com/app/apikey adresinden alabilirsiniz
-  static const String _apiKey = 'AIzaSyD-2yAmVEnF_HAT4FOLT7ntNuWx_L8cNJ';
+  static const String _apiKey = 'AIzaSyBrJT-0ix7u-WoG7s0thW3ZavjVszXs0AY';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
