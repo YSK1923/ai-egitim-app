@@ -5,10 +5,9 @@ import '../models/question_model.dart';
 import '../models/student_model.dart';
 
 class AIService extends ChangeNotifier {
-  // ⚠️ Buraya kendi Anthropic API anahtarınızı ekleyin
-  static const String _apiKey = 'YOUR_ANTHROPIC_API_KEY';
-  static const String _baseUrl = 'https://api.anthropic.com/v1/messages';
-  static const String _model = 'claude-opus-4-20250514';
+  static const String _apiKey = 'AIzaSyCbidrLu3nNZLT9X71EivAF82BwjhTInrA';
+  static const String _baseUrl =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   bool _isLoading = false;
   String _currentExplanation = '';
@@ -17,9 +16,6 @@ class AIService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get currentExplanation => _currentExplanation;
 
-  // ============================================================
-  // MODÜL 1: MÜFREDat MOTORU - Konu bazlı soru üretimi
-  // ============================================================
   Future<Question?> generateQuestion({
     required String topic,
     required String subtopic,
@@ -51,15 +47,8 @@ Aşağıdaki JSON formatında yanıt ver (başka hiçbir şey yazma):
   "difficulty": $difficulty,
   "examProbability": 0.75,
   "emoji": "🔢",
-  "storyContext": "Hikaye bağlamı - sanki bir macera oyunundaymış gibi"
+  "storyContext": "Hikaye bağlamı"
 }
-
-Önemli kurallar:
-- Soru Türkçe olsun (İngilizce için İngilizce)
-- 4 seçenek olsun
-- correctIndex: doğru cevabın index'i (0-3)
-- storyContext: öğrencinin ilgisini çekecek eğlenceli bir bağlam
-- examProbability: bu sorunun sınavda çıkma ihtimali
 ''';
 
     try {
@@ -78,9 +67,6 @@ Aşağıdaki JSON formatında yanıt ver (başka hiçbir şey yazma):
     return null;
   }
 
-  // ============================================================
-  // MODÜL 2: SORU ANALİZ MOTORU - Yanlış cevap analizi
-  // ============================================================
   Future<AIResponse?> analyzeWrongAnswer({
     required Question question,
     required String userAnswer,
@@ -105,25 +91,18 @@ SEÇENEKLER: ${question.options.join(', ')}
 DOĞRU CEVAP: ${question.correctAnswer}
 ÖĞRENCİNİN CEVABI: $userAnswer
 KONU: ${question.topic} - ${question.subtopic}
-HİKAYE BAĞLAMI: ${question.storyContext}
 
 Açıklama stili: $explanationStyle
 
 Aşağıdaki JSON formatında yanıt ver:
 {
-  "explanation": "Ana açıklama (emoji kullan, $explanationStyle stil)",
-  "alternativeExplanation": "Farklı bir açıklama yöntemi - analoji veya günlük hayat örneği",
-  "storyMode": "Hikaye modunda açıklama - karakterler ve macera kullanarak",
-  "encouragement": "Motive edici ve eğlenceli bir mesaj",
+  "explanation": "Ana açıklama",
+  "alternativeExplanation": "Farklı açıklama",
+  "storyMode": "Hikaye modunda açıklama",
+  "encouragement": "Motive edici mesaj",
   "hints": ["İpucu 1", "İpucu 2", "İpucu 3"],
   "suggestedXP": 5
 }
-
-Kurallar:
-- Asla "yanlış yaptın" veya negatif mesaj kullanma
-- Her denemede farklı bir açıklama yöntemi kullan
-- Emoji ve eğlenceli dil kullan
-- Öğrenci asla tıkanamaz, her zaman yeni bir yol sun
 ''';
 
     try {
@@ -144,25 +123,14 @@ Kurallar:
     return null;
   }
 
-  // ============================================================
-  // MODÜL 5: ÇIKMA İHTİMALİ MOTORU
-  // ============================================================
   Future<Map<String, double>> calculateExamProbabilities({
     required String topic,
     required List<String> subtopics,
   }) async {
     final prompt = '''
-Türkiye'deki sınavlar için (LGS, YKS, KPSS) aşağıdaki konuların çıkma ihtimallerini hesapla:
-
-Konu: $topic
-Alt konular: ${subtopics.join(', ')}
-
-Son 5 yılın sınav verilerini baz alarak her alt konunun çıkma olasılığını 0.0-1.0 arasında ver.
-
-JSON formatında yanıt ver:
-{
-  ${subtopics.map((s) => '"$s": 0.75').join(',\n  ')}
-}
+Türkiye sınavları (LGS, YKS) için bu konuların çıkma ihtimallerini ver:
+Konu: $topic, Alt konular: ${subtopics.join(', ')}
+JSON formatında (0.0-1.0 arası): { ${subtopics.map((s) => '"$s": 0.75').join(', ')} }
 ''';
 
     try {
@@ -178,40 +146,21 @@ JSON formatında yanıt ver:
     return {for (var s in subtopics) s: 0.5};
   }
 
-  // ============================================================
-  // MODÜL 6: BİLGİ KAZANCI MOTORU
-  // ============================================================
   Future<String> generateLearningInsight(StudentModel student) async {
     final prompt = '''
-Aşağıdaki öğrenci profilini analiz et ve kişiselleştirilmiş bir içgörü üret:
-
-Ad: ${student.name}
-Seviye: ${student.level}
-Başarı oranı: ${(student.successRate * 100).toInt()}%
-Seri: ${student.streak} gün
-Konu hakimiyetleri: ${student.topicMastery.entries.map((e) => '${e.key}: ${(e.value * 100).toInt()}%').join(', ')}
-
-Kısa (2-3 cümle) ve motive edici bir değerlendirme yap. Emoji kullan. Türkçe yaz.
-Güçlü yönleri öne çıkar ve en çok gelişmesi gereken alana dikkat çek.
+Öğrenci: ${student.name}, Seviye: ${student.level}, 
+Başarı: ${(student.successRate * 100).toInt()}%, Seri: ${student.streak} gün.
+Kısa (2-3 cümle), motive edici, emoji'li, Türkçe değerlendirme yap.
 ''';
-
     try {
-      return await _callAPI(prompt) ?? '🌟 Harika ilerliyorsun! Devam et!';
+      return await _callAPI(prompt) ?? '🌟 Harika ilerliyorsun!';
     } catch (e) {
-      return '🌟 Harika ilerliyorsun! Devam et!';
+      return '🌟 Harika ilerliyorsun!';
     }
   }
 
-  // ============================================================
-  // MODÜL 8: EĞLENCELİ ÖĞRETİM MOTORU - Hikaye modu
-  // ============================================================
   Future<String> generateStoryIntro(String topic) async {
-    final prompt = '''
-"$topic" konusunu öğretmek için eğlenceli ve merak uyandıran bir hikaye girişi yaz.
-Sanki bir RPG oyununun başlangıcı gibi olsun. Maksimum 3 cümle. Emoji kullan. Türkçe.
-Öğrenciyi bu maceraya davet et!
-''';
-
+    final prompt = '"$topic" konusu için RPG tarzı, 3 cümle, emoji\'li, Türkçe hikaye girişi yaz.';
     try {
       return await _callAPI(prompt) ?? '🎮 Yeni bir macera başlıyor!';
     } catch (e) {
@@ -219,30 +168,29 @@ Sanki bir RPG oyununun başlangıcı gibi olsun. Maksimum 3 cümle. Emoji kullan
     }
   }
 
-  // ============================================================
-  // TEMEL API ÇAĞRISI
-  // ============================================================
   Future<String?> _callAPI(String prompt) async {
     try {
       final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-          'anthropic-version': '2023-06-01',
-        },
+        Uri.parse('$_baseUrl?key=$_apiKey'),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'model': _model,
-          'max_tokens': 1024,
-          'messages': [
-            {'role': 'user', 'content': prompt}
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt}
+              ]
+            }
           ],
+          'generationConfig': {
+            'maxOutputTokens': 1024,
+            'temperature': 0.7,
+          },
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data['content'][0]['text'] as String?;
+        return data['candidates'][0]['content']['parts'][0]['text'] as String?;
       } else {
         debugPrint('API hatası: ${response.statusCode} - ${response.body}');
         return null;
